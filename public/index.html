@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="favicon.png">
+<title>InsuraTrack | Automated SMS and Email Reminders for Motor Vehicle Insurance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070a12; --bg-elev:#0e1322; --bg-elev-2:#151b2e; --border:#232b45;
+    --text:#eaf2ff; --text-dim:#a6b2cc; --text-faint:#6c7897;
+    --brand:#6bfbf2; --brand-2:#3fd9d0; --brand-ink:#04121a; --accent:#8a4fe0;
+    --brand-soft:rgba(107,251,242,.10);
+    --ok:#3ddc97; --ok-soft:rgba(61,220,151,.12);
+    --warn:#f0c24b; --warn-soft:rgba(240,194,75,.13);
+    --danger:#ff6b78; --danger-soft:rgba(255,107,120,.12);
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 10px 28px -14px rgba(0,0,0,.6);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+    --bg:#eef3f8; --bg-elev:#ffffff; --bg-elev-2:#f4f7fb; --border:#d9e1ec;
+    --text:#0b1220; --text-dim:#46526b; --text-faint:#77839c;
+    --brand:#0b8f92; --brand-2:#086f72; --brand-ink:#ffffff; --accent:#5b2aa8;
+    --brand-soft:rgba(11,143,146,.10);
+    --ok:#0f8a55; --ok-soft:#e1f5ec;
+    --warn:#a8700a; --warn-soft:#fdf1d4;
+    --danger:#c8313c; --danger-soft:#fce7e9;
+    --shadow:0 1px 2px rgba(11,18,32,.05), 0 10px 28px -16px rgba(11,18,32,.18);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#eef3f8; --bg-elev:#ffffff; --bg-elev-2:#f4f7fb; --border:#d9e1ec;
+    --text:#0b1220; --text-dim:#46526b; --text-faint:#77839c;
+    --brand:#0b8f92; --brand-2:#086f72; --brand-ink:#ffffff; --accent:#5b2aa8;
+    --brand-soft:rgba(11,143,146,.10);
+    --ok:#0f8a55; --ok-soft:#e1f5ec;
+    --warn:#a8700a; --warn-soft:#fdf1d4;
+    --danger:#c8313c; --danger-soft:#fce7e9;
+    --shadow:0 1px 2px rgba(11,18,32,.05), 0 10px 28px -16px rgba(11,18,32,.18);
+  }
+  :root[data-theme="dark"]{
+    --bg:#070a12; --bg-elev:#0e1322; --bg-elev-2:#151b2e; --border:#232b45;
+    --text:#eaf2ff; --text-dim:#a6b2cc; --text-faint:#6c7897;
+    --brand:#6bfbf2; --brand-2:#3fd9d0; --brand-ink:#04121a; --accent:#8a4fe0;
+    --brand-soft:rgba(107,251,242,.10);
+    --ok:#3ddc97; --ok-soft:rgba(61,220,151,.12);
+    --warn:#f0c24b; --warn-soft:rgba(240,194,75,.13);
+    --danger:#ff6b78; --danger-soft:rgba(255,107,120,.12);
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 10px 28px -14px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Manrope',system-ui,-apple-system,sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .app{max-width:1240px;margin:0 auto;padding:20px 20px 60px;}
+
+  /* Topbar */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 4px 20px;flex-wrap:wrap;gap:12px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-mark{
+    width:38px;height:38px;border-radius:10px;
+    background:linear-gradient(135deg,var(--brand),var(--brand-2));
+    display:flex;align-items:center;justify-content:center;
+    font-size:19px;flex-shrink:0;
+  }
+  .brand-name{font-weight:800;font-size:19px;letter-spacing:-0.02em;}
+  .brand-tag{font-size:11.5px;color:var(--text-faint);margin-top:-2px;}
+  .role-switch{
+    display:flex;background:var(--bg-elev);border:1px solid var(--border);
+    border-radius:11px;padding:3px;box-shadow:var(--shadow);
+  }
+  .role-btn{
+    border:none;background:transparent;color:var(--text-dim);
+    padding:8px 14px;border-radius:8px;font-weight:600;font-size:13.5px;
+    cursor:pointer;font-family:inherit;transition:all .15s;
+  }
+  .role-btn.active{background:var(--brand);color:#fff;}
+  .theme-btn{
+    border:1px solid var(--border);background:var(--bg-elev);color:var(--text-dim);
+    width:38px;height:38px;border-radius:10px;cursor:pointer;font-size:16px;
+    display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);
+  }
+
+  /* Tabs */
+  .tabs{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:0;}
+  .tab{
+    border:none;background:transparent;color:var(--text-dim);font-family:inherit;
+    padding:10px 14px;font-weight:700;font-size:13.5px;cursor:pointer;
+    border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tab:hover{color:var(--text);}
+  .tab.active{color:var(--brand);border-bottom-color:var(--brand);}
+  .tab .count{
+    background:var(--bg-elev-2);color:var(--text-faint);font-size:10.5px;
+    padding:1px 6px;border-radius:20px;font-weight:700;
+  }
+  .tab.active .count{background:var(--brand-soft);color:var(--brand);}
+
+  .view{display:none;}
+  .view.active{display:block;animation:fadein .2s ease;}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  /* Stat cards */
+  .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:22px;}
+  .stat-card{
+    background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px 18px;box-shadow:var(--shadow);
+  }
+  .stat-num{font-size:26px;font-weight:800;letter-spacing:-0.02em;}
+  .stat-label{font-size:12px;color:var(--text-faint);font-weight:600;margin-top:2px;text-transform:uppercase;letter-spacing:.03em;}
+
+  .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+  .section-title{font-size:16px;font-weight:800;letter-spacing:-0.01em;}
+  .section-sub{font-size:12.5px;color:var(--text-faint);margin-top:2px;}
+
+  .btn{
+    border:none;font-family:inherit;font-weight:700;font-size:13.5px;
+    padding:9px 16px;border-radius:10px;cursor:pointer;transition:all .15s;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn-primary{background:var(--brand);color:#fff;}
+  .btn-primary:hover{background:var(--brand-2);}
+  .btn-ghost{background:var(--bg-elev);color:var(--text);border:1px solid var(--border);}
+  .btn-ghost:hover{border-color:var(--brand);color:var(--brand);}
+  .btn-danger{background:var(--danger-soft);color:var(--danger);}
+  .btn-sm{padding:6px 11px;font-size:12.5px;border-radius:8px;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+
+  /* Vehicle grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
+  .vcard{
+    background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);
+    padding:18px;box-shadow:var(--shadow);position:relative;
+  }
+  .vcard-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+  .plate{
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;
+    background:var(--bg-elev-2);border:1.5px dashed var(--border);border-radius:8px;
+    padding:6px 12px;letter-spacing:.06em;
+  }
+  .badge{
+    font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;
+    text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;
+  }
+  .badge-active{background:var(--ok-soft);color:var(--ok);}
+  .badge-soon{background:var(--warn-soft);color:var(--warn);}
+  .badge-lapsed{background:var(--danger-soft);color:var(--danger);}
+  .vcard-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px dashed var(--border);}
+  .vcard-row:last-of-type{border-bottom:none;}
+  .vcard-row .k{color:var(--text-faint);}
+  .vcard-row .v{font-weight:700;text-align:right;}
+  .vcard-actions{display:flex;gap:8px;margin-top:14px;}
+  .empty{
+    text-align:center;padding:50px 20px;color:var(--text-faint);
+    border:1.5px dashed var(--border);border-radius:var(--radius);font-size:13.5px;
+  }
+
+  /* Modal */
+  .overlay{
+    position:fixed;inset:0;background:rgba(10,12,20,0.55);backdrop-filter:blur(2px);
+    display:none;align-items:flex-start;justify-content:center;z-index:100;padding:40px 16px;overflow-y:auto;
+  }
+  .overlay.active{display:flex;}
+  .modal{
+    background:var(--bg-elev);border-radius:16px;border:1px solid var(--border);
+    width:100%;max-width:520px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);
+  }
+  .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+  .modal-title{font-size:17px;font-weight:800;}
+  .close-x{background:none;border:none;color:var(--text-faint);font-size:20px;cursor:pointer;padding:2px 6px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12.5px;font-weight:700;color:var(--text-dim);margin-bottom:6px;}
+  .field input, .field select{
+    width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);
+    background:var(--bg-elev-2);color:var(--text);font-family:inherit;font-size:14px;
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--brand);outline-offset:-1px;}
+  .field-hint{font-size:11.5px;color:var(--text-faint);margin-top:4px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .upload-box{
+    border:1.5px dashed var(--border);border-radius:10px;padding:16px;text-align:center;
+    cursor:pointer;background:var(--bg-elev-2);font-size:12.5px;color:var(--text-faint);
+  }
+  .upload-box:hover{border-color:var(--brand);color:var(--brand);}
+  .doc-thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .doc-thumb{position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;border:1px solid var(--border);}
+  .doc-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .doc-thumb .rm{
+    position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;
+    border:none;border-radius:50%;width:16px;height:16px;font-size:10px;cursor:pointer;line-height:1;
+  }
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
+
+  /* SMS log */
+  .sms-item{
+    display:flex;gap:12px;padding:12px 14px;background:var(--bg-elev);border:1px solid var(--border);
+    border-radius:11px;margin-bottom:9px;box-shadow:var(--shadow);align-items:flex-start;
+  }
+  .sms-icon{
+    width:34px;height:34px;border-radius:9px;background:var(--brand-soft);color:var(--brand);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;
+  }
+  .sms-body{flex:1;min-width:0;}
+  .sms-text{font-size:13px;line-height:1.5;background:var(--bg-elev-2);padding:8px 10px;border-radius:8px;margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:12px;}
+  .sms-meta{font-size:11.5px;color:var(--text-faint);margin-top:6px;}
+  .sms-to{font-weight:700;color:var(--text);}
+
+  /* Agent table */
+  .table-wrap{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto;box-shadow:var(--shadow);}
+  table{width:100%;border-collapse:collapse;min-width:640px;}
+  th{
+    text-align:left;font-size:11px;color:var(--text-faint);text-transform:uppercase;
+    letter-spacing:.04em;padding:12px 16px;border-bottom:1px solid var(--border);font-weight:700;
+  }
+  td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13.5px;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:var(--bg-elev-2);}
+
+  .banner{
+    background:var(--brand-soft);border:1px solid var(--border);border-radius:12px;
+    padding:14px 16px;font-size:13px;color:var(--text-dim);margin-bottom:20px;line-height:1.6;
+  }
+  .banner b{color:var(--text);}
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--text);color:var(--bg);padding:11px 20px;border-radius:10px;
+    font-size:13.5px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.25);
+    z-index:200;opacity:0;transition:opacity .25s;pointer-events:none;
+  }
+  .toast.show{opacity:1;}
+  ::-webkit-scrollbar{height:8px;width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+
+  @media (max-width:640px){
+    .field-row{grid-template-columns:1fr;}
+    .brand-tag{display:none;}
+  }
+
+  /* ---- Logo / icon system ---- */
+  .ic{width:1.15em;height:1.15em;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;vertical-align:-0.2em;}
+  .ic-lg{width:20px;height:20px;}
+  .topbar{
+    --bg-elev:#0e1322; --border:#232b45; --text:#eaf2ff; --text-dim:#a6b2cc;
+    --brand:#6bfbf2; --brand-2:#3fd9d0; --brand-ink:#04121a; --shadow:none;
+    background:linear-gradient(120deg,#04060c 0%,#0a0f1f 55%,#1a0f33 100%);
+    border:1px solid #232b45;border-radius:18px;padding:14px 22px;margin-bottom:18px;
+    box-shadow:0 0 0 1px rgba(107,251,242,.05),0 14px 40px -18px rgba(106,47,181,.55);
+  }
+  .brand{display:flex;flex-direction:column;align-items:flex-start;gap:0;}
+  .brand-logo{height:92px;width:auto;display:block;}
+  .brand-tag{font-family:'Chakra Petch',sans-serif;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:#7f8db0;margin:2px 0 0 6px;}
+  .role-btn{display:inline-flex;align-items:center;gap:7px;}
+  .role-btn.active{background:var(--brand);color:var(--brand-ink);}
+  .theme-btn{color:#a6b2cc;}
+  .theme-btn:hover{color:#6bfbf2;border-color:#6bfbf2;}
+  .btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand-2));color:var(--brand-ink);}
+  .btn-primary:hover{background:linear-gradient(135deg,var(--brand-2),var(--brand));filter:brightness(1.06);}
+  .section-title,.stat-num,.brand-name{font-family:'Chakra Petch',sans-serif;}
+  .section-title{font-size:18px;letter-spacing:.01em;}
+  .stat-card{position:relative;overflow:hidden;}
+  .stat-card::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,var(--brand),var(--accent));}
+  .stat-num{font-weight:700;}
+  .vcard{transition:border-color .15s, transform .15s;}
+  .vcard:hover{border-color:var(--brand);}
+  .tab .ic{width:1.1em;height:1.1em;}
+  .banner{display:flex;gap:12px;align-items:flex-start;border-left:3px solid var(--brand);}
+  .banner .ic{color:var(--brand);margin-top:1px;}
+  .sms-icon .ic{width:17px;height:17px;}
+  .upload-box{display:flex;align-items:center;justify-content:center;gap:8px;}
+  .close-x{display:inline-flex;align-items:center;}
+  .doc-thumb .rm{display:flex;align-items:center;justify-content:center;padding:0;}
+  .doc-thumb .rm .ic{width:10px;height:10px;stroke-width:3;}
+  .vcard-row .v .ic{color:var(--brand);}
+  td .ic{color:var(--brand);}
+  td .btn .ic{color:inherit;}
+  @media (max-width:640px){ .brand-logo{height:64px;} .brand-tag{display:none;} .topbar{padding:12px 14px;} }
+
+  .hidden{display:none!important;}
+  .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .auth-card{width:100%;max-width:440px;background:var(--bg-elev);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;}
+  .auth-head{background:linear-gradient(120deg,#04060c,#0a0f1f 55%,#1a0f33);padding:20px;display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .auth-head img{height:96px;width:auto;}
+  .auth-head p{margin:0;font-family:'Chakra Petch',sans-serif;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:#7f8db0;text-align:center;}
+  .auth-body{padding:22px;}
+  .seg{display:flex;background:var(--bg-elev-2);border:1px solid var(--border);border-radius:10px;padding:3px;margin-bottom:18px;}
+  .seg button{flex:1;border:none;background:transparent;color:var(--text-dim);padding:9px;border-radius:8px;font-weight:700;font-size:13.5px;font-family:inherit;cursor:pointer;}
+  .seg button.active{background:var(--brand);color:var(--brand-ink);}
+  .err{color:var(--danger);font-size:13px;min-height:18px;margin:4px 0 10px;font-weight:600;}
+  .full{width:100%;justify-content:center;padding:11px;}
+  .demo-note{margin-top:16px;font-size:12px;color:var(--text-faint);text-align:center;line-height:1.6;}
+  .user-chip{display:flex;align-items:center;gap:10px;color:var(--text);}
+  .user-chip .nm{font-weight:700;font-size:13.5px;line-height:1.2;text-align:right;}
+  .user-chip .rl{font-size:11px;color:var(--brand);text-transform:uppercase;letter-spacing:.05em;font-weight:700;text-align:right;}
+  .top-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .chk{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--text-dim);margin-right:16px;}
+  .chk input{width:auto;accent-color:var(--brand);}
+  .chk-row{display:flex;flex-wrap:wrap;}
+  .chip{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:var(--bg-elev-2);color:var(--text-faint);border:1px solid var(--border);display:inline-flex;gap:4px;align-items:center;}
+  .chip .ic{width:12px;height:12px;}
+  .chip.on{color:var(--brand);border-color:var(--brand);background:var(--brand-soft);}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;}
+  .badge-sent{background:var(--ok-soft);color:var(--ok);}
+  .badge-simulated{background:var(--brand-soft);color:var(--brand);}
+  .badge-failed{background:var(--danger-soft);color:var(--danger);}
+  .sms-icon.email{background:var(--brand-soft);}
+  .sms-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;}
+  .sms-subject{font-weight:700;font-size:13.5px;margin-top:6px;}
+  .err-line{color:var(--danger);font-size:12px;margin-top:6px;}
+  .doc{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .doc-thumb{width:84px;height:84px;cursor:pointer;background:var(--bg-elev-2);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;color:var(--text-faint);font-size:11px;font-weight:700;}
+  .doc-thumb .ic{width:26px;height:26px;color:var(--brand);}
+  .doc-kind{font-size:11px;font-weight:700;color:var(--text-dim);}
+  .vault-bar{display:flex;gap:8px;align-items:center;margin-top:14px;}
+  .vault-bar select{padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-elev-2);color:var(--text);font-family:inherit;font-size:12.5px;}
+  .viewer{position:fixed;inset:0;background:rgba(5,7,13,.88);display:none;align-items:center;justify-content:center;z-index:150;padding:20px;}
+  .viewer.active{display:flex;}
+  .viewer img{max-width:100%;max-height:90vh;border-radius:10px;}
+  .viewer iframe{width:min(900px,100%);height:90vh;border:none;border-radius:10px;background:#fff;}
+  .viewer .close-x{position:absolute;top:14px;right:18px;color:#fff;font-size:22px;}
+  .form-err{color:var(--danger);font-size:13px;font-weight:600;margin-top:6px;min-height:16px;}
+  .spin{opacity:.6;pointer-events:none;}
+  .vcard-row .v .chips{justify-content:flex-end;}
+  .mini{font-size:11.5px;color:var(--text-faint);font-weight:500;}
+  .sms-text{white-space:pre-wrap;word-break:break-word;}
+</style>
+<link rel="stylesheet" href="design.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></symbol><symbol id="i-paperclip" viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol><symbol id="i-building" viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></symbol><symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol><symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-2.93 1.41-1.41m11.32-11.32 1.41-1.41M2 12h2m16 0h2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol><symbol id="i-radio" viewBox="0 0 24 24"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5M19.1 4.9C23 8.8 23 15.1 19.1 19"/><circle cx="12" cy="12" r="2"/></symbol><symbol id="i-phone" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/></symbol><symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol><symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><path d="M14 2v6h6"/></symbol><symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></symbol></defs></svg>
+
+<!-- ============ AUTH SCREEN ============ -->
+<div class="auth-wrap" id="authScreen">
+  <section class="auth-story" aria-label="Welcome to InsuraTrack">
+    <img src="logo.png" alt="InsuraTrack" class="story-logo">
+    <span class="eyebrow">YOUR NEXT RENEWAL, UNDER CONTROL</span>
+    <h1>Less to remember.<br>More peace of mind.</h1>
+    <p>One place for your vehicle policies, renewal reminders, and the documents that keep you moving.</p>
+    <div class="story-road" aria-hidden="true"><svg viewBox="0 0 500 160"><path d="M-10 145C120 145 110 35 250 35S380 130 510 10"/><path class="road-line" d="M-10 145C120 145 110 35 250 35S380 130 510 10"/><circle cx="250" cy="35" r="12"/></svg></div>
+    <div class="story-features"><span>01 <b>Track your coverage</b></span><span>02 <b>Get timely reminders</b></span><span>03 <b>Keep documents handy</b></span></div>
+    <small>Built for vehicle owners and CTPL agents in the Philippines.</small>
+  </section>
+  <div class="auth-card">
+    <div class="auth-head">
+      <img src="logo.png" alt="InsuraTrack">
+      <p>SMS and email reminders for motor vehicle insurance</p>
+    </div>
+    <div class="auth-body"><span class="eyebrow">WELCOME TO INSURATRACK</span><h2 id="authHeading">Your journey starts here.</h2><p class="auth-intro">Sign in or create an account to keep renewals in view.</p>
+      <div class="seg">
+        <button id="segLogin" class="active" onclick="setAuthMode('login')" type="button">Sign in</button>
+        <button id="segRegister" onclick="setAuthMode('register')" type="button">Create account</button>
+      </div>
+      <form id="authForm" onsubmit="submitAuth(event)" novalidate>
+        <div id="regFields" class="hidden">
+          <div class="field"><label for="a_name">Full name</label><input id="a_name" autocomplete="name" placeholder="Juan Dela Cruz"></div>
+          <div class="field-row">
+            <div class="field"><label for="a_mobile">Mobile number</label><input id="a_mobile" autocomplete="tel" placeholder="09XX XXX XXXX"></div>
+            <div class="field"><label for="a_role">I am a</label>
+              <select id="a_role" onchange="syncAgentCode()"><option value="owner">Vehicle owner</option><option value="agent">CTPL agent</option></select></div>
+          </div>
+          <div class="field hidden" id="agentCodeField"><label for="a_code">Agent signup code</label><input id="a_code" placeholder="Provided by your agency admin"></div>
+        </div>
+        <div class="field"><label for="a_email">Email</label><input id="a_email" type="email" autocomplete="email" placeholder="you@example.com"></div>
+        <div class="field"><label for="a_password">Password</label><input id="a_password" type="password" autocomplete="current-password" placeholder="At least 8 characters"></div>
+        <div class="err" id="authErr" role="alert"></div>
+        <button class="btn btn-primary full" id="authBtn" type="submit">Sign in</button>
+      </form>
+      <div class="demo-note" id="demoNote">Tried <b>npm run seed</b>? Use <span class="mono">owner@demo.ph</span> or <span class="mono">agent@demo.ph</span> with password <span class="mono">demo1234</span>.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<div class="app hidden" id="app">
+  <div class="topbar">
+    <div class="brand">
+      <img class="brand-logo" src="logo.png" alt="InsuraTrack">
+      <div class="brand-tag">Automated SMS and email reminders for motor vehicle insurance</div>
+    </div>
+    <div class="top-right">
+      <div class="user-chip"><div><div class="nm" id="userName"></div><div class="rl" id="userRole"></div></div></div>
+      <button class="theme-btn" onclick="toggleTheme()" id="themeBtn" title="Toggle theme" aria-label="Toggle theme"></button>
+      <button class="theme-btn" onclick="logout()" title="Sign out" aria-label="Sign out"><svg class="ic" aria-hidden="true"><use href="#i-logout"/></svg></button>
+    </div>
+  </div>
+
+  <header class="page-intro"><div><span class="eyebrow">YOUR INSURANCE WORKSPACE</span><h1 id="workspaceTitle">A clear view of what’s ahead.</h1><p>Stay on top of renewals. Keep every document close.</p></div><span class="workspace-label"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg> CTPL &amp; LTO tracking</span></header>
+  <div class="banner" id="roleBanner"></div>
+  <nav class="tabs" id="tabs" aria-label="Workspace navigation"></nav>
+
+  <!-- Dashboard (owner) -->
+  <div class="view active" id="view-dashboard">
+    <div class="stats-row" id="statsRow"></div>
+    <div class="section-head">
+      <div><div class="section-title">Your vehicles</div><div class="section-sub">All your vehicles with live renewal status</div></div>
+      <button class="btn btn-primary" onclick="openVehicleModal()"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg> Add Vehicle</button>
+    </div>
+    <div class="grid" id="vehicleGrid"></div>
+  </div>
+
+  <!-- Admin panel (agent) -->
+  <div class="view" id="view-agent">
+    <div class="stats-row" id="agentStats"></div>
+    <div class="section-head">
+      <div><div class="section-title">Your client portfolio</div><div class="section-sub">Encode client policies and send reminders on their behalf</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" onclick="openVehicleModal()"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg> Encode Client</button>
+        <button class="btn btn-primary" id="bulkBtn" onclick="runBulk()"><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg> Send Bulk Reminders</button>
+      </div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Client</th><th>Plate No.</th><th>LTO Month</th><th>Insurance Expiry</th><th>Status</th><th>Channels</th><th>Vault</th><th></th></tr></thead>
+      <tbody id="agentTableBody"></tbody>
+    </table></div>
+  </div>
+
+  <!-- Notifications -->
+  <div class="view" id="view-sms">
+    <div class="section-head">
+      <div><div class="section-title">Notification history</div><div class="section-sub" id="smsSub"></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" id="scanBtn" onclick="runScan()"><svg class="ic" aria-hidden="true"><use href="#i-refresh"/></svg> Run Reminder Scan</button>
+        <button class="btn btn-danger" onclick="clearLog()"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg> Clear Log</button>
+      </div>
+    </div>
+    <div class="banner" id="modeBanner"></div>
+    <div id="smsLog"></div>
+  </div>
+
+  <!-- Vault -->
+  <div class="view" id="view-vault">
+    <div class="section-head"><div><div class="section-title">Document vault</div><div class="section-sub">Certificate of Cover (COC) and OR/CR, stored securely per vehicle. Photos or PDFs, up to 6 MB each.</div></div></div>
+    <div class="grid" id="vaultGrid"></div>
+    <input type="file" id="docInput" accept="image/*,application/pdf" multiple class="hidden" onchange="onDocPicked(event)">
+  </div>
+</div>
+
+<!-- Vehicle modal -->
+<div class="overlay" id="vehicleModal">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="modalTitle">Add Vehicle</div>
+      <button class="close-x" onclick="closeVehicleModal()" aria-label="Close"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+    <input type="hidden" id="editId">
+    <div class="field"><label for="f_owner">Owner / client name</label><input id="f_owner" placeholder="Juan Dela Cruz"></div>
+    <div class="field-row">
+      <div class="field"><label for="f_mobile">Mobile number (SMS)</label><input id="f_mobile" placeholder="09XX XXX XXXX"></div>
+      <div class="field"><label for="f_email">Email</label><input id="f_email" type="email" placeholder="client@example.com"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label for="f_plate">Plate number</label><input id="f_plate" placeholder="ABC1234" style="text-transform:uppercase;"></div>
+      <div class="field"><label for="f_expiry">CTPL expiry date</label><input id="f_expiry" type="date"></div>
+    </div>
+    <div class="field-hint" id="ltoHint" style="margin:-6px 0 14px;">LTO renewal month syncs to the plate's last digit.</div>
+    <div class="field"><label>Send reminders by</label>
+      <div class="chk-row">
+        <label class="chk"><input type="checkbox" id="f_sms" checked> SMS</label>
+        <label class="chk"><input type="checkbox" id="f_mail" checked> Email</label>
+      </div></div>
+    <div class="form-err" id="formErr" role="alert"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeVehicleModal()">Cancel</button>
+      <button class="btn btn-primary" id="saveBtn" onclick="saveVehicle()">Save Vehicle</button>
+    </div>
+  </div>
+</div>
+
+<div class="viewer" id="viewer" onclick="closeViewer()">
+  <button class="close-x" aria-label="Close"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+  <div id="viewerBody" onclick="event.stopPropagation()"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= helpers ================= */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ICON = (n, c = '') => `<svg class="ic ${c}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const TOKEN_KEY = 'insuratrack_token', THEME_KEY = 'insuratrack_theme';
+
+function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+function lsSet(k, v) { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} }
+function fmtDate(s) { return new Date(s + 'T00:00:00Z').toLocaleDateString('en-PH', { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' }); }
+function fmtDateTime(s) { return new Date(s.replace(' ', 'T') + 'Z').toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }); }
+
+let toastTimer;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3200); }
+
+/* ================= state ================= */
+let token = lsGet(TOKEN_KEY), me = null, config = null;
+let vehicles = [], notifications = [];
+let currentTab = 'dashboard', authMode = 'login', uploadTarget = null;
+
+/* ================= API client ================= */
+async function api(method, path, body) {
+  const headers = {};
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (token) headers.Authorization = 'Bearer ' + token;
+  let res;
+  try { res = await fetch('/api' + path, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined }); }
+  catch { throw new Error('Cannot reach the server. Is it running?'); }
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && token && !path.startsWith('/auth/')) { forceLogout(); throw new Error('Session expired. Please sign in again.'); }
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
+/* ================= theme ================= */
+function effectiveTheme() {
+  const t = document.documentElement.getAttribute('data-theme');
+  if (t) return t;
+  return (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+}
+function toggleTheme() {
+  const next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next); lsSet(THEME_KEY, next); updateThemeBtn();
+}
+function updateThemeBtn() { $('themeBtn').innerHTML = effectiveTheme() === 'dark' ? ICON('sun') : ICON('moon'); }
+
+/* ================= auth ================= */
+function setAuthMode(m) {
+  authMode = m;
+  $('segLogin').classList.toggle('active', m === 'login');
+  $('segRegister').classList.toggle('active', m === 'register');
+  $('regFields').classList.toggle('hidden', m !== 'register');
+  $('authBtn').textContent = m === 'login' ? 'Sign in' : 'Create account';
+  $('a_password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+  $('authErr').textContent = '';
+  syncAgentCode();
+}
+function syncAgentCode() {
+  const need = authMode === 'register' && $('a_role').value === 'agent' && config && config.agentCodeRequired;
+  $('agentCodeField').classList.toggle('hidden', !need);
+}
+async function submitAuth(e) {
+  e.preventDefault();
+  $('authErr').textContent = ''; $('authBtn').disabled = true;
+  try {
+    const body = { email: $('a_email').value, password: $('a_password').value };
+    if (authMode === 'register') Object.assign(body, { name: $('a_name').value, mobile: $('a_mobile').value, role: $('a_role').value, agentCode: $('a_code').value });
+    const res = await api('POST', authMode === 'login' ? '/auth/login' : '/auth/register', body);
+    token = res.token; lsSet(TOKEN_KEY, token); me = res.user;
+    $('a_password').value = '';
+    await enterApp();
+  } catch (err) { $('authErr').textContent = err.message; }
+  finally { $('authBtn').disabled = false; }
+}
+function forceLogout() { token = null; me = null; lsSet(TOKEN_KEY, null); showAuth(); }
+function logout() { forceLogout(); }
+function showAuth() { $('app').classList.add('hidden'); $('authScreen').classList.remove('hidden'); setAuthMode('login'); }
+
+async function enterApp() {
+  $('authScreen').classList.add('hidden'); $('app').classList.remove('hidden');
+  $('userName').textContent = me.name;
+  $('userRole').textContent = me.role === 'agent' ? 'CTPL Agent' : 'Vehicle Owner';
+  renderBanner();
+  currentTab = me.role === 'agent' ? 'agent' : 'dashboard';
+  await refreshAll();
+  showTab(currentTab);
+}
+
+/* ================= data ================= */
+async function refreshVehicles() { vehicles = (await api('GET', '/vehicles')).vehicles; }
+async function refreshNotifications() { notifications = (await api('GET', '/notifications')).notifications; }
+async function refreshAll() { await Promise.all([refreshVehicles(), refreshNotifications()]); }
+
+/* ================= tabs ================= */
+function renderBanner() {
+  $('roleBanner').innerHTML = me.role === 'owner'
+    ? ICON('shield', 'ic-lg') + '<div><b>Vehicle Owner view.</b> Track every vehicle you own, get automatic SMS and email reminders before your CTPL insurance and LTO registration lapse, and keep your OR/CR and COC on hand.</div>'
+    : ICON('building', 'ic-lg') + '<div><b>CTPL Agent view.</b> Encode your clients\' policies and let InsuraTrack follow up by SMS and email automatically, so renewals stay with you.</div>';
+}
+function renderTabs() {
+  const first = me.role === 'agent' ? { id: 'agent', label: ICON('building') + ' Clients', count: vehicles.length } : { id: 'dashboard', label: ICON('home') + ' Overview' };
+  const list = [first, { id: 'sms', label: ICON('message') + ' Notifications', count: notifications.length }, { id: 'vault', label: ICON('folder') + ' Document Vault' }];
+  $('tabs').innerHTML = list.map((t) => `<button class="tab ${currentTab === t.id ? 'active' : ''}" aria-current="${currentTab === t.id ? 'page' : 'false'}" onclick="showTab('${t.id}')">${t.label}${t.count !== undefined ? ` <span class="count">${t.count}</span>` : ''}</button>`).join('');
+}
+function showTab(id) {
+  currentTab = id;
+  $('workspaceTitle').textContent = ({dashboard: "A clear view of what’s ahead.", agent: "Keep every client moving.", sms: "Every reminder, in one place.", vault: "Your paperwork. All together."})[id];
+  document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+  $('view-' + id).classList.add('active');
+  renderAll();
+}
+function renderAll() {
+  renderTabs();
+  if (currentTab === 'dashboard') renderDashboard();
+  if (currentTab === 'agent') renderAgent();
+  if (currentTab === 'sms') renderNotifications();
+  if (currentTab === 'vault') renderVault();
+}
+
+/* ================= rendering ================= */
+const STATUS = { active: ['Active', 'badge-active'], soon: ['Expiring Soon', 'badge-soon'], lapsed: ['Lapsed', 'badge-lapsed'] };
+const statusBadge = (v) => `<span class="badge ${STATUS[v.status][1]}">${STATUS[v.status][0]}</span>`;
+const dayLabel = (d) => d < 0 ? `${-d} day${d === -1 ? '' : 's'} overdue` : d === 0 ? 'due today' : `${d} day${d === 1 ? '' : 's'} left`;
+const channelChips = (v) => `<div class="chips"><span class="chip ${v.notify_sms && v.owner_mobile ? 'on' : ''}">${ICON('phone')} SMS</span><span class="chip ${v.notify_email && v.owner_email ? 'on' : ''}">${ICON('mail')} Email</span></div>`;
+
+function statsHtml() {
+  const c = { active: 0, soon: 0, lapsed: 0 }; vehicles.forEach((v) => c[v.status]++);
+  return `<div class="stat-card">${ICON('home', 'stat-icon')}<div class="stat-num">${vehicles.length}</div><div class="stat-label">${me.role === 'agent' ? 'Clients' : 'Total Vehicles'}</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--ok)">${c.active}</div><div class="stat-label">Active</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--warn)">${c.soon}</div><div class="stat-label">Expiring Soon</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--danger)">${c.lapsed}</div><div class="stat-label">Lapsed</div></div>`;
+}
+
+function renderDashboard() {
+  $('statsRow').innerHTML = statsHtml();
+  $('vehicleGrid').innerHTML = vehicles.length ? vehicles.map((v) => `
+    <div class="vcard">
+      <div class="vcard-top"><div class="plate">${esc(v.plate_number)}</div>${statusBadge(v)}</div>
+      <div class="vcard-row"><span class="k">Owner</span><span class="v">${esc(v.owner_name)}</span></div>
+      <div class="vcard-row"><span class="k">CTPL Expiry</span><span class="v">${fmtDate(v.insurance_expiry)} <span class="mini">(${dayLabel(v.days_left)})</span></span></div>
+      <div class="vcard-row"><span class="k">LTO Renewal Month</span><span class="v">${esc(v.lto_month || '-')}</span></div>
+      <div class="vcard-row"><span class="k">Reminders</span><span class="v">${channelChips(v)}</span></div>
+      <div class="vcard-row"><span class="k">Documents</span><span class="v">${v.docs.length} on file</span></div>
+      <div class="vcard-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openVehicleModal(${v.id})">${ICON('edit')} Edit</button>
+        <button class="btn btn-ghost btn-sm" onclick="remindNow(${v.id})">${ICON('send')} Remind me</button>
+        <button class="btn btn-danger btn-sm" onclick="removeVehicle(${v.id})" aria-label="Delete">${ICON('trash')}</button>
+      </div>
+    </div>`).join('') : '<div class="empty">No vehicles yet. Click "Add Vehicle" to start tracking a policy.</div>';
+}
+
+function renderAgent() {
+  $('agentStats').innerHTML = statsHtml();
+  $('agentTableBody').innerHTML = vehicles.length ? vehicles.map((v) => `<tr>
+    <td><b>${esc(v.owner_name)}</b><br><span class="mono mini">${esc(v.owner_mobile || 'no mobile')}${v.owner_email ? ' · ' + esc(v.owner_email) : ''}</span></td>
+    <td class="mono">${esc(v.plate_number)}</td>
+    <td>${esc(v.lto_month || '-')}</td>
+    <td>${fmtDate(v.insurance_expiry)}<br><span class="mini">${dayLabel(v.days_left)}</span></td>
+    <td>${statusBadge(v)}</td>
+    <td>${channelChips(v)}</td>
+    <td>${v.docs.length} ${ICON('paperclip')}</td>
+    <td style="white-space:nowrap;">
+      <button class="btn btn-ghost btn-sm" onclick="openVehicleModal(${v.id})">Edit</button>
+      <button class="btn btn-ghost btn-sm" onclick="remindNow(${v.id})" aria-label="Send reminder now">${ICON('send')}</button>
+      <button class="btn btn-danger btn-sm" onclick="removeVehicle(${v.id})" aria-label="Delete">${ICON('trash')}</button>
+    </td></tr>`).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--text-faint);padding:30px;">No clients encoded yet.</td></tr>';
+}
+
+function renderNotifications() {
+  const days = config ? config.reminderDays.join(' / ') : '60 / 30 / 15 / 10 / 5';
+  $('smsSub').textContent = `Reminders go out automatically ${days} days before expiry, by SMS and email.`;
+  const sim = config && (!config.email.live || !config.sms.live);
+  const parts = [];
+  if (config) {
+    parts.push(`Email: <b>${config.email.live ? esc(config.email.provider) + ' (live)' : 'simulated'}</b>`);
+    parts.push(`SMS: <b>${config.sms.live ? esc(config.sms.provider) + ' (live)' : 'simulated'}</b>`);
+  }
+  $('modeBanner').innerHTML = ICON('radio', 'ic-lg') + '<div>' + parts.join(' &nbsp;·&nbsp; ') +
+    (sim ? '<br>Simulated channels log each message here without sending anything. Add provider keys to the server\'s <span class="mono">.env</span> file to go live.' : '<br>Messages are being delivered through your configured providers.') + '</div>';
+  const TRIG = { auto: 'Auto', bulk: 'Bulk', manual: 'Manual' };
+  $('smsLog').innerHTML = notifications.length ? notifications.map((n) => `
+    <div class="sms-item">
+      <div class="sms-icon ${n.channel}">${ICON(n.channel === 'email' ? 'mail' : 'phone')}</div>
+      <div class="sms-body">
+        <div class="sms-head"><div><span class="sms-to">${esc(n.owner_name)}</span> <span class="mini">→ ${esc(n.recipient)}</span></div>
+          <span class="badge badge-${n.status}">${n.status}</span></div>
+        ${n.subject ? `<div class="sms-subject">${esc(n.subject)}</div>` : ''}
+        <div class="sms-text">${esc(n.message)}</div>
+        ${n.error ? `<div class="err-line">${esc(n.error)}</div>` : ''}
+        <div class="sms-meta">${n.channel.toUpperCase()} · ${TRIG[n.trigger_type]} · ${fmtDateTime(n.created_at)} · Plate ${esc(n.plate_number)}</div>
+      </div>
+    </div>`).join('') : '<div class="empty">Nothing sent yet. Click "Run Reminder Scan" to check which policies are due.</div>';
+}
+
+/* ---------- vault ---------- */
+const blobCache = new Map();
+async function docBlob(id) {
+  if (blobCache.has(id)) return blobCache.get(id);
+  const res = await fetch('/api/documents/' + id + '/file', { headers: { Authorization: 'Bearer ' + token } });
+  if (!res.ok) throw new Error('Could not load document');
+  const b = await res.blob(); const entry = { url: URL.createObjectURL(b), type: b.type };
+  blobCache.set(id, entry); return entry;
+}
+const KIND = { COC: 'COC', ORCR: 'OR/CR', OTHER: 'Other' };
+function renderVault() {
+  $('vaultGrid').innerHTML = vehicles.length ? vehicles.map((v) => `
+    <div class="vcard">
+      <div class="vcard-top"><div class="plate">${esc(v.plate_number)}</div><span class="mini">${esc(v.owner_name)}</span></div>
+      ${v.docs.length ? `<div class="doc-thumbs" style="gap:12px;">${v.docs.map((d) => `
+        <div class="doc">
+          <div class="doc-thumb" onclick="viewDoc(${d.id})" title="${esc(d.filename)}">
+            ${d.mime === 'application/pdf' ? ICON('file') + 'PDF' : `<img data-doc="${d.id}" alt="${esc(d.filename)}">`}
+            <button class="rm" onclick="event.stopPropagation();removeDoc(${d.id})" aria-label="Remove">${ICON('x')}</button>
+          </div><div class="doc-kind">${KIND[d.kind]}</div>
+        </div>`).join('')}</div>` : '<div class="mini" style="padding:10px 0;">No documents uploaded yet.</div>'}
+      <div class="vault-bar">
+        <select id="kind_${v.id}" aria-label="Document type"><option value="COC">COC</option><option value="ORCR">OR/CR</option><option value="OTHER">Other</option></select>
+        <button class="btn btn-ghost btn-sm" onclick="pickDoc(${v.id})">${ICON('upload')} Upload</button>
+      </div>
+    </div>`).join('') : '<div class="empty">Add a vehicle first, then store its documents here.</div>';
+  document.querySelectorAll('img[data-doc]').forEach(async (img) => {
+    try { img.src = (await docBlob(Number(img.dataset.doc))).url; } catch {}
+  });
+}
+async function viewDoc(id) {
+  try {
+    const { url, type } = await docBlob(id);
+    $('viewerBody').innerHTML = type === 'application/pdf' ? `<iframe src="${url}" title="Document"></iframe>` : `<img src="${url}" alt="Document">`;
+    $('viewer').classList.add('active');
+  } catch (e) { toast(e.message); }
+}
+function closeViewer() { $('viewer').classList.remove('active'); $('viewerBody').innerHTML = ''; }
+function pickDoc(id) { uploadTarget = id; $('docInput').click(); }
+
+// Shrink phone photos before upload (max 1600px JPEG) so the vault stays fast.
+function readAsDataUrl(file) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(new Error('Could not read file')); r.readAsDataURL(file); }); }
+async function prepareFile(file) {
+  if (file.type === 'application/pdf') return readAsDataUrl(file);
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.85);
+  } catch { return readAsDataUrl(file); }
+}
+async function onDocPicked(e) {
+  const files = Array.from(e.target.files || []); e.target.value = '';
+  if (!files.length || !uploadTarget) return;
+  const kind = $('kind_' + uploadTarget).value; let ok = 0;
+  for (const f of files) {
+    try { await api('POST', `/vehicles/${uploadTarget}/documents`, { kind, filename: f.name, dataUrl: await prepareFile(f) }); ok++; }
+    catch (err) { toast(`${f.name}: ${err.message}`); }
+  }
+  if (ok) { toast(`${ok} document${ok > 1 ? 's' : ''} saved to the vault.`); await refreshVehicles(); renderAll(); }
+}
+async function removeDoc(id) {
+  if (!confirm('Remove this document from the vault?')) return;
+  try { await api('DELETE', '/documents/' + id); blobCache.delete(id); await refreshVehicles(); renderAll(); toast('Document removed.'); } catch (e) { toast(e.message); }
+}
+
+/* ================= vehicle modal ================= */
+const LTO = { 1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June', 7: 'July', 8: 'August', 9: 'September', 0: 'October' };
+function ltoHint() {
+  const d = $('f_plate').value.replace(/\D/g, '');
+  $('ltoHint').textContent = d ? `LTO renewal month for this plate: ${LTO[d[d.length - 1]]} (based on the last digit).` : "LTO renewal month syncs to the plate's last digit.";
+}
+function openVehicleModal(id) {
+  $('formErr').textContent = '';
+  const v = id ? vehicles.find((x) => x.id === id) : null;
+  $('editId').value = v ? v.id : '';
+  $('modalTitle').textContent = v ? 'Edit Vehicle' : (me.role === 'agent' ? 'Encode Client Vehicle' : 'Add Vehicle');
+  $('f_owner').value = v ? v.owner_name : (me.role === 'owner' ? me.name : '');
+  $('f_mobile').value = v ? v.owner_mobile : (me.role === 'owner' ? (me.mobile || '') : '');
+  $('f_email').value = v ? v.owner_email : (me.role === 'owner' ? me.email : '');
+  $('f_plate').value = v ? v.plate_number : '';
+  $('f_expiry').value = v ? v.insurance_expiry : '';
+  $('f_sms').checked = v ? v.notify_sms : true;
+  $('f_mail').checked = v ? v.notify_email : true;
+  ltoHint();
+  $('vehicleModal').classList.add('active');
+}
+function closeVehicleModal() { $('vehicleModal').classList.remove('active'); }
+async function saveVehicle() {
+  $('formErr').textContent = ''; $('saveBtn').disabled = true;
+  const body = { owner_name: $('f_owner').value, owner_mobile: $('f_mobile').value, owner_email: $('f_email').value,
+    plate_number: $('f_plate').value, insurance_expiry: $('f_expiry').value, notify_sms: $('f_sms').checked, notify_email: $('f_mail').checked };
+  try {
+    const id = $('editId').value;
+    await (id ? api('PUT', '/vehicles/' + id, body) : api('POST', '/vehicles', body));
+    closeVehicleModal(); await refreshVehicles(); renderAll();
+    toast(id ? 'Vehicle updated.' : 'Vehicle saved. Add its COC and OR/CR in the Document Vault.');
+  } catch (e) { $('formErr').textContent = e.message; }
+  finally { $('saveBtn').disabled = false; }
+}
+async function removeVehicle(id) {
+  const v = vehicles.find((x) => x.id === id);
+  if (!confirm(`Delete ${v.plate_number} and its documents? This cannot be undone.`)) return;
+  try { await api('DELETE', '/vehicles/' + id); await refreshAll(); renderAll(); toast('Vehicle removed.'); } catch (e) { toast(e.message); }
+}
+
+/* ================= reminder actions ================= */
+const summarize = (r) => r.map((x) => `${x.channel === 'sms' ? 'SMS' : 'Email'}: ${x.status === 'skipped' ? 'skipped (' + x.reason + ')' : x.status}`).join('  |  ');
+async function remindNow(id) {
+  try { const r = await api('POST', `/vehicles/${id}/remind`); toast(summarize(r.results)); await refreshNotifications(); renderTabs(); }
+  catch (e) { toast(e.message); }
+}
+const summaryText = (s) => { const n = s.sent + s.simulated; return n || s.failed ? `${n} sent${s.failed ? `, ${s.failed} failed` : ''}, ${s.skipped} skipped.` : 'Nothing to send right now. No policy is in a reminder window, or reminders were already sent.'; };
+async function runScan() {
+  $('scanBtn').classList.add('spin');
+  try { const r = await api('POST', '/reminders/run'); toast(summaryText(r.summary)); await refreshNotifications(); renderAll(); }
+  catch (e) { toast(e.message); } finally { $('scanBtn').classList.remove('spin'); }
+}
+async function runBulk() {
+  if (!vehicles.length) return toast('Encode a client first.');
+  $('bulkBtn').classList.add('spin');
+  try { const r = await api('POST', '/reminders/bulk'); toast(summaryText(r.summary)); await refreshNotifications(); renderAll(); }
+  catch (e) { toast(e.message); } finally { $('bulkBtn').classList.remove('spin'); }
+}
+async function clearLog() {
+  if (!notifications.length || !confirm('Clear the notification log? Reminder history is used to avoid duplicate messages.')) return;
+  try { await api('DELETE', '/notifications'); await refreshNotifications(); renderAll(); } catch (e) { toast(e.message); }
+}
+
+/* ================= boot ================= */
+$('f_plate').addEventListener('input', ltoHint);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeVehicleModal(); closeViewer(); } });
+(async function boot() {
+  const t = lsGet(THEME_KEY); if (t) document.documentElement.setAttribute('data-theme', t);
+  updateThemeBtn();
+  try { config = await api('GET', '/config'); } catch {}
+  $('demoNote').classList.toggle('hidden', !!(config && config.sms && config.sms.live));
+  if (token) {
+    try { me = (await api('GET', '/me')).user; await enterApp(); return; } catch { token = null; lsSet(TOKEN_KEY, null); }
+  }
+  showAuth();
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "insuratrack",
+  "version": "1.0.0",
+  "description": "InsuraTrack: automated SMS + email reminder system for motor vehicle (CTPL) insurance and LTO registration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --experimental-sqlite --no-warnings server.js",
+    "dev": "node --watch --experimental-sqlite --no-warnings server.js",
+    "seed": "node --experimental-sqlite --no-warnings seed.js"
+  },
+  "engines": { "node": ">=22.5.0" },
+  "license": "MIT"
+}
